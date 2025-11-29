@@ -38,6 +38,8 @@ public class CharacterMovement : MonoBehaviour
     private Vector3 spawnPoint;
     private PlatformTrigger currentTrigger;
 
+    private DialogueController currentDialogue;
+
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
@@ -60,6 +62,12 @@ public class CharacterMovement : MonoBehaviour
 
         if (currentTrigger != null && Input.GetKeyDown(KeyCode.E))
             currentTrigger.ActivatePlatform();
+
+        if (currentDialogue != null && Input.GetKeyDown(KeyCode.E))
+        {
+            currentDialogue.StartDialogue();
+        }
+
     }
 
     private void FixedUpdate()
@@ -184,12 +192,26 @@ public class CharacterMovement : MonoBehaviour
 
         if (other.CompareTag("Kill"))
             Respawn();
+
+        if (other.CompareTag("DialogStart"))
+        {
+            if (other.TryGetComponent(out DialogueController dialogue))
+                currentDialogue = dialogue;
+        }
+
     }
 
     private void OnTriggerExit(Collider other)
     {
         if (other.TryGetComponent(out PlatformTrigger trigger) && currentTrigger == trigger)
             currentTrigger = null;
+
+        if (other.CompareTag("DialogStart"))
+        {
+            if (other.TryGetComponent(out DialogueController dialogue) && currentDialogue == dialogue)
+                currentDialogue = null;
+        }
+
     }
 
     public float GetStamina() => currentStamina / maxStamina;
