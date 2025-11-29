@@ -19,9 +19,13 @@ public class CharacterMovement : MonoBehaviour
     public float staminaRecoveryRate = 1f;
     public float staminaDrainRate = 1.5f;
 
-    [Header("Spawn")]
-    public GameObject spawnPrefab;
-    public Vector3 spawnOffset = new Vector3(0, 1f, 0);
+    [Header("Audio")]
+    public AudioSource footstepAudioSource;
+    public AudioSource sfxAudioSource;
+    public AudioClip walkClip;
+    public AudioClip runClip;
+    public AudioClip jumpClip;
+    public AudioClip deathClip;
 
     private Rigidbody rb;
     private Animator animator;
@@ -37,7 +41,6 @@ public class CharacterMovement : MonoBehaviour
     private float currentCooldownTime = 0f;
     private Vector3 spawnPoint;
     private PlatformTrigger currentTrigger;
-
     private DialogueController currentDialogue;
 
     private void Start()
@@ -47,6 +50,9 @@ public class CharacterMovement : MonoBehaviour
         currentStamina = maxStamina;
         spawnPoint = transform.position;
         animator = GetComponent<Animator>();
+
+        if (footstepAudioSource != null)
+            footstepAudioSource.loop = true;
     }
 
     private void Update()
@@ -57,17 +63,11 @@ public class CharacterMovement : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Space))
             TryJump();
 
-        if (Input.GetKeyDown(KeyCode.Q))
-            SpawnObject();
-
         if (currentTrigger != null && Input.GetKeyDown(KeyCode.E))
             currentTrigger.ActivatePlatform();
 
         if (currentDialogue != null && Input.GetKeyDown(KeyCode.E))
-        {
             currentDialogue.StartDialogue();
-        }
-
     }
 
     private void FixedUpdate()
@@ -88,11 +88,12 @@ public class CharacterMovement : MonoBehaviour
 
     private void Move()
     {
-        if (inputDirection.magnitude < 0.1f)
+        bool isWalkingNow = inputDirection.magnitude > 0.1f;
+
+        if (!isWalkingNow)
         {
             animator.SetFloat("Speed", 0f);
-            isRunning = false;
-            animator.SetBool("IsRunning", false);
+            StopFootsteps();
             return;
         }
 
@@ -104,16 +105,35 @@ public class CharacterMovement : MonoBehaviour
         camRight.y = 0;
         camForward.Normalize();
         camRight.Normalize();
-
         Vector3 moveDir = camForward * inputDirection.z + camRight * inputDirection.x;
 
         Quaternion targetRot = Quaternion.LookRotation(moveDir);
         rb.rotation = Quaternion.Slerp(rb.rotation, targetRot, rotationSpeed * Time.fixedDeltaTime);
-
         rb.MovePosition(rb.position + moveDir * speed * Time.fixedDeltaTime);
 
         animator.SetFloat("Speed", speed);
         animator.SetBool("IsRunning", isRunning);
+
+        PlayFootsteps();
+    }
+
+    private void PlayFootsteps()
+    {
+        if (!isGrounded || footstepAudioSource == null) return;
+
+        AudioClip selectedClip = isRunning ? runClip : walkClip;
+
+        if (!footstepAudioSource.isPlaying || footstepAudioSource.clip != selectedClip)
+        {
+            footstepAudioSource.clip = selectedClip;
+            footstepAudioSource.Play();
+        }
+    }
+
+    private void StopFootsteps()
+    {
+        if (footstepAudioSource != null && footstepAudioSource.isPlaying)
+            footstepAudioSource.Stop();
     }
 
     private void TryJump()
@@ -125,6 +145,10 @@ public class CharacterMovement : MonoBehaviour
         rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
 
         animator.SetBool("IsJumping", true);
+        StopFootsteps();
+
+        if (jumpClip != null)
+            sfxAudioSource.PlayOneShot(jumpClip);
 
         Invoke(nameof(ResetJump), jumpCooldown);
     }
@@ -144,6 +168,8 @@ public class CharacterMovement : MonoBehaviour
 
         if (isGrounded && !wasGrounded)
             animator.SetBool("IsJumping", false);
+
+        if (!isGrounded) StopFootsteps();
     }
 
     private void HandleStamina()
@@ -170,16 +196,14 @@ public class CharacterMovement : MonoBehaviour
         }
     }
 
-    private void SpawnObject()
-    {
-        if (spawnPrefab == null) return;
-        Instantiate(spawnPrefab, transform.position + spawnOffset, Quaternion.identity);
-    }
-
     private void Respawn()
     {
         rb.velocity = Vector3.zero;
         transform.position = spawnPoint;
+        StopFootsteps();
+
+        if (deathClip != null)
+            sfxAudioSource.PlayOneShot(deathClip);
     }
 
     private void OnTriggerEnter(Collider other)
@@ -198,7 +222,6 @@ public class CharacterMovement : MonoBehaviour
             if (other.TryGetComponent(out DialogueController dialogue))
                 currentDialogue = dialogue;
         }
-
     }
 
     private void OnTriggerExit(Collider other)
@@ -211,7 +234,6 @@ public class CharacterMovement : MonoBehaviour
             if (other.TryGetComponent(out DialogueController dialogue) && currentDialogue == dialogue)
                 currentDialogue = null;
         }
-
     }
 
     public float GetStamina() => currentStamina / maxStamina;

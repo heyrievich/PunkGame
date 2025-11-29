@@ -8,6 +8,10 @@ public class PauseManager : MonoBehaviour
     [Header("Pause UI")]
     public GameObject pausePanel;
 
+    [Header("Sound Settings")]
+    public AudioSource audioSource;
+    public AudioClip clickSound;
+
     private bool isPaused = false;
 
     private void Awake()
@@ -20,7 +24,6 @@ public class PauseManager : MonoBehaviour
             return;
         }
 
-        // Скрываем панель при старте игры
         if (pausePanel != null)
             pausePanel.SetActive(false);
 
@@ -31,25 +34,28 @@ public class PauseManager : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Escape))
         {
+            PlayClick();
             if (isPaused) ResumeGame();
             else PauseGame();
         }
     }
 
-    // 🔥 Пауза игры
     public void PauseGame()
     {
+        PlayClick();
+
         isPaused = true;
-        Time.timeScale = 0f; // стопируем игру
+        Time.timeScale = 0f;
         pausePanel.SetActive(true);
 
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
     }
 
-    // ▶ Продолжить
     public void ResumeGame()
     {
+        PlayClick();
+
         isPaused = false;
         Time.timeScale = 1f;
         pausePanel.SetActive(false);
@@ -58,18 +64,25 @@ public class PauseManager : MonoBehaviour
         Cursor.visible = false;
     }
 
-    // 🔁 Рестарт уровня
     public void RestartLevel()
     {
+        PlayClick();
+
         Time.timeScale = 1f;
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
-    // 🏠 Главное меню
     public void GoToMainMenu()
     {
+        PlayClick();
+
         Time.timeScale = 1f;
         SceneManager.LoadScene("Main Menu");
-        // Не забудь изменить название под свою сцену!
+    }
+
+    private void PlayClick()
+    {
+        if (audioSource != null && clickSound != null)
+            audioSource.PlayOneShot(clickSound);
     }
 }

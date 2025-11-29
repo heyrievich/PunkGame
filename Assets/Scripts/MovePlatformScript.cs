@@ -14,6 +14,10 @@ public class PlatformTrigger : MonoBehaviour
     public float timeToReturn = 2f;
     public float moveSpeed = 2f;
 
+    [Header("Audio")]
+    public AudioSource audioSource;
+    public AudioClip activationClip;
+
     private bool canActivate = true;
     private Vector3 startPosition;
     private Vector3 targetPosition;
@@ -23,7 +27,6 @@ public class PlatformTrigger : MonoBehaviour
         startPosition = platform.transform.position;
 
         Vector3 offset = Vector3.zero;
-
         if (x) offset = Vector3.right * distance;
         if (y) offset = Vector3.up * distance;
         if (z) offset = Vector3.forward * distance;
@@ -35,18 +38,19 @@ public class PlatformTrigger : MonoBehaviour
     {
         if (!canActivate) return;
         canActivate = false;
+
+        if (audioSource != null && activationClip != null)
+            audioSource.PlayOneShot(activationClip);
+
         StartCoroutine(MovePlatform());
     }
 
     private IEnumerator MovePlatform()
     {
-        // Движение туда
         yield return MoveToPosition(targetPosition);
 
-        // Ждём заданное время
         yield return new WaitForSeconds(timeToReturn);
 
-        // Движение обратно
         yield return MoveToPosition(startPosition);
 
         canActivate = true;

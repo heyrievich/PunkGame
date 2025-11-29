@@ -3,15 +3,20 @@ using UnityEngine;
 public class DoorTrigger : MonoBehaviour
 {
     [Header("Door Settings")]
-    public Transform door;            // Объект двери
-    public float moveDistance = 3f;   // Насколько она открывается
-    public float moveSpeed = 2f;      // Скорость открытия
-    public bool moveX;                // Если TRUE — дверь двигается по X
-    public bool moveY;                // Если TRUE — по Y
-    public bool moveZ;                // Если TRUE — по Z
+    public Transform door;
+    public float moveDistance = 3f;
+    public float moveSpeed = 2f;
+    public bool moveX;
+    public bool moveY;
+    public bool moveZ;
 
     [Header("Inventory Key ID")]
-    public string keyItemId = "Key";  // ID ключа в InventoryManager
+    public string keyItemId = "Key";
+
+    [Header("Audio Settings")]
+    public AudioSource audioSource;
+    public AudioClip openSound;      // звук успешного открытия
+    public AudioClip noKeySound;     // звук ошибки (нет ключа)
 
     private bool isPlayerInside = false;
     private bool isOpen = false;
@@ -49,18 +54,21 @@ public class DoorTrigger : MonoBehaviour
 
     private void TryOpenDoor()
     {
-        // Проверяем есть ли ключ
         if (InventoryManager.Instance.HasItem(keyItemId))
         {
             isOpen = true;
-
-            // Удаляем ключ после использования
             InventoryManager.Instance.RemoveItem(keyItemId, 1);
+
+            if (audioSource && openSound)
+                audioSource.PlayOneShot(openSound);
 
             Debug.Log("Дверь открыта!");
         }
         else
         {
+            if (audioSource && noKeySound)
+                audioSource.PlayOneShot(noKeySound);
+
             Debug.Log("У вас нет ключа!");
         }
     }

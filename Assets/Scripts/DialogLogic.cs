@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
+using UnityEngine.SceneManagement;
 
 public class DialogueController : MonoBehaviour
 {
@@ -19,47 +20,47 @@ public class DialogueController : MonoBehaviour
     [Header("Player Reference")]
     public CharacterMovement playerMovement;
 
-    [Tooltip("Общее количество реплик (если 0, будет установлено автоматически как dialog1Lines.Count + dialog2Lines.Count)")]
+    [Header("Next Level Settings")]
+    public bool isNextLevel = false;
+    public string nextSceneName;
+
+    [Tooltip("Общее количество реплик (если 0 — берётся автоматически)")]
     public int dialogMax = 0;
 
-    private int nextIndex1 = 0; // следующий индекс для dialog1 (уже показанные: 0 .. nextIndex1-1)
-    private int nextIndex2 = 0; // следующий индекс для dialog2
-    private int shownCount = 0; // сколько реплик уже показано (включая первую)
+    private int nextIndex1 = 0;
+    private int nextIndex2 = 0;
+    private int shownCount = 0;
     private bool showingDialog1 = true;
     private bool isDialogAnimating = false;
     private bool isDialogueActive = false;
+
 
     public void StartDialogue()
     {
         if (isDialogueActive) return;
 
-        // если dialogMax не задан - посчитает автоматически
         if (dialogMax <= 0)
             dialogMax = dialog1Lines.Count + dialog2Lines.Count;
 
         isDialogueActive = true;
 
-        // Блокируем движение игрока
         if (playerMovement != null)
             playerMovement.enabled = false;
 
-        // Инициализация индексов
         nextIndex1 = 0;
         nextIndex2 = 0;
         shownCount = 0;
         showingDialog1 = true;
         isDialogAnimating = false;
 
-        // Показываем первую реплику dialog1 (если есть)
         if (dialog1Lines.Count > 0)
         {
             dialog1Text.text = dialog1Lines[0];
-            nextIndex1 = 1; // следующая для dialog1 будет 1
+            nextIndex1 = 1;
             shownCount = 1;
         }
         else
         {
-            // если первой строки нет — сразу завершаем
             EndDialogue();
             return;
         }
@@ -81,17 +82,14 @@ public class DialogueController : MonoBehaviour
     {
         if (isDialogAnimating) return;
 
-        // Если уже показано достаточно реплик — завершаем
         if (shownCount >= dialogMax)
         {
             EndDialogue();
             return;
         }
 
-        // Определяем, какая панель сейчас открыта и какую реплику показывать следующей
         if (showingDialog1)
         {
-            // Сейчас открыт dialog1 — нужно показать dialog2[nextIndex2]
             if (nextIndex2 < dialog2Lines.Count)
             {
                 string line = dialog2Lines[nextIndex2];
@@ -105,15 +103,10 @@ public class DialogueController : MonoBehaviour
                     false
                 ));
             }
-            else
-            {
-                // Нет больше реплик для dialog2 — завершаем
-                EndDialogue();
-            }
+            else EndDialogue();
         }
         else
         {
-            // Сейчас открыт dialog2 — нужно показать dialog1[nextIndex1]
             if (nextIndex1 < dialog1Lines.Count)
             {
                 string line = dialog1Lines[nextIndex1];
@@ -127,11 +120,7 @@ public class DialogueController : MonoBehaviour
                     true
                 ));
             }
-            else
-            {
-                // Нет больше реплик для dialog1 — завершаем
-                EndDialogue();
-            }
+            else EndDialogue();
         }
     }
 
@@ -139,16 +128,20 @@ public class DialogueController : MonoBehaviour
     {
         isDialogueActive = false;
 
-        // Закрываем панели
         if (dialog1Animator != null) dialog1Animator.Play("DialogPanel1Close");
         if (dialog2Animator != null) dialog2Animator.Play("DialogPanel2Close");
 
-        // Возвращаем управление игроку
-        if (playerMovement != null)
+        // Вернуть управление игроку только если не переключаем сцену
+        if (!isNextLevel && playerMovement != null)
             playerMovement.enabled = true;
 
-        // Сброс флагов
         isDialogAnimating = false;
+
+        // Перейти на новый уровень, если флаг активен
+        if (isNextLevel && !string.IsNullOrEmpty(nextSceneName))
+        {
+            SceneManager.LoadScene(nextSceneName);
+        }
     }
 
     private System.Collections.IEnumerator SwitchDialog(
@@ -160,7 +153,6 @@ public class DialogueController : MonoBehaviour
         isDialogAnimating = true;
 
         if (closingAnimator != null) closingAnimator.Play(closeTrigger);
-        // Подстраховка: ждём, но лучше синхронизировать с длиной анимации
         yield return new WaitForSeconds(0.3f);
 
         showingDialog1 = nextDialogIs1;

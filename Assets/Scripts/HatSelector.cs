@@ -5,19 +5,23 @@ using UnityEngine.SceneManagement;
 public class HatSelector : MonoBehaviour
 {
     [Header("Hats")]
-    public List<GameObject> hats; // ѕеретащи сюда 5 шл€п
+    public List<GameObject> hats;
     private int currentIndex = 0;
+
+    [Header("Sound Settings")]
+    public AudioSource audioSource;   // »сточник звука
+    public AudioClip clickSound;      // «вук при нажатии кнопки
 
     private void Start()
     {
-        // «агружаем выбранную шл€пу из PlayerPrefs
         currentIndex = PlayerPrefs.GetInt("SelectedHatID", 0);
         UpdateHats();
     }
 
-    //  нопка "Next"
     public void NextHat()
     {
+        PlayClick();
+
         currentIndex++;
         if (currentIndex >= hats.Count)
             currentIndex = 0;
@@ -25,9 +29,10 @@ public class HatSelector : MonoBehaviour
         UpdateHats();
     }
 
-    //  нопка "Previous"
     public void PreviousHat()
     {
+        PlayClick();
+
         currentIndex--;
         if (currentIndex < 0)
             currentIndex = hats.Count - 1;
@@ -35,21 +40,26 @@ public class HatSelector : MonoBehaviour
         UpdateHats();
     }
 
-    //  нопка "Select" Ч сохран€ем и переходим на Level1
     public void SelectHat()
     {
+        PlayClick();
+
         PlayerPrefs.SetInt("SelectedHatID", currentIndex);
         PlayerPrefs.Save();
 
         SceneManager.LoadScene("Level1");
     }
 
-    // ¬ключаем текущую шл€пу, остальные выключаем
     private void UpdateHats()
     {
         for (int i = 0; i < hats.Count; i++)
-        {
             hats[i].SetActive(i == currentIndex);
-        }
+    }
+
+    // ¬оспроизведение звука
+    private void PlayClick()
+    {
+        if (audioSource != null && clickSound != null)
+            audioSource.PlayOneShot(clickSound);
     }
 }
