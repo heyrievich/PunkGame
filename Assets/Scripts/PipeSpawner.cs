@@ -16,11 +16,25 @@ public class PipeSpawnerUI : MonoBehaviour
 
     private float timer = 0f;
     private bool canSpawn = true;
+    private bool isGameStarted = false; // старт игры после клика
 
     private bool toggleSpawn = true;  // чтобы поочередно спавнить
 
     void Update()
     {
+        // Ждём первый клик, чтобы стартовать игру
+        if (!isGameStarted)
+        {
+            if (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Space))
+            {
+                isGameStarted = true;
+            }
+            else
+            {
+                return; // игра не стартовала, труб не спавним
+            }
+        }
+
         if (!canSpawn) return;
 
         timer += Time.deltaTime;

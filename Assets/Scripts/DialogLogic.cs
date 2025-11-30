@@ -2,6 +2,7 @@
 using UnityEngine;
 using TMPro;
 using UnityEngine.SceneManagement;
+using System.Collections;
 
 public class DialogueController : MonoBehaviour
 {
@@ -19,6 +20,15 @@ public class DialogueController : MonoBehaviour
 
     [Header("Player Reference")]
     public CharacterMovement playerMovement;
+    public GameObject uiInterface;      // интерфейс игрока
+    public GameObject dialogOverlay;    // UI, который показываем во время диалога
+
+    [Header("Transition Animator")]
+    public Animator transitionAnimator; // аниматор для перехода на следующий уровень
+
+    [Header("Audio")]
+    public AudioSource audioSource;
+    public AudioClip nextLineClip;      // звук при переходе на следующую реплику
 
     [Header("Next Level Settings")]
     public bool isNextLevel = false;
@@ -34,7 +44,6 @@ public class DialogueController : MonoBehaviour
     private bool isDialogAnimating = false;
     private bool isDialogueActive = false;
 
-
     public void StartDialogue()
     {
         if (isDialogueActive) return;
@@ -44,8 +53,17 @@ public class DialogueController : MonoBehaviour
 
         isDialogueActive = true;
 
+        // Отключаем управление игроком
         if (playerMovement != null)
             playerMovement.enabled = false;
+
+        // Отключаем основной UI
+        if (uiInterface != null)
+            uiInterface.SetActive(false);
+
+        // Включаем диалоговый UI/оверлей
+        if (dialogOverlay != null)
+            dialogOverlay.SetActive(true);
 
         nextIndex1 = 0;
         nextIndex2 = 0;
@@ -65,7 +83,8 @@ public class DialogueController : MonoBehaviour
             return;
         }
 
-        dialog1Animator.Play("DialogPanel1Open");
+        if (dialog1Animator != null)
+            dialog1Animator.Play("DialogPanel1Open");
     }
 
     private void Update()
@@ -87,6 +106,10 @@ public class DialogueController : MonoBehaviour
             EndDialogue();
             return;
         }
+
+        // Проигрываем звук листания диалога
+        if (audioSource != null && nextLineClip != null)
+            audioSource.PlayOneShot(nextLineClip);
 
         if (showingDialog1)
         {
@@ -135,13 +158,35 @@ public class DialogueController : MonoBehaviour
         if (!isNextLevel && playerMovement != null)
             playerMovement.enabled = true;
 
+        // Включить основной UI
+        if (uiInterface != null)
+            uiInterface.SetActive(true);
+
+        // Отключить диалоговый UI/оверлей
+        if (dialogOverlay != null)
+            dialogOverlay.SetActive(false);
+
         isDialogAnimating = false;
 
-        // Перейти на новый уровень, если флаг активен
+        // Если нужно перейти на новый уровень
         if (isNextLevel && !string.IsNullOrEmpty(nextSceneName))
         {
-            SceneManager.LoadScene(nextSceneName);
+            if (transitionAnimator != null)
+            {
+                transitionAnimator.Play("toPerehod");
+                StartCoroutine(LoadSceneWithDelay(1.5f));
+            }
+            else
+            {
+                SceneManager.LoadScene(nextSceneName);
+            }
         }
+    }
+
+    private IEnumerator LoadSceneWithDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        SceneManager.LoadScene(nextSceneName);
     }
 
     private System.Collections.IEnumerator SwitchDialog(

@@ -14,6 +14,10 @@ public class CharacterMovement : MonoBehaviour
     public float groundCheckDistance = 0.2f;
     public LayerMask groundLayer;
 
+    // Coyote Time
+    public float coyoteTime = 0.15f;
+    private float coyoteTimeCounter;
+
     [Header("Stamina")]
     public float maxStamina = 5f;
     public float staminaRecoveryRate = 1f;
@@ -138,19 +142,22 @@ public class CharacterMovement : MonoBehaviour
 
     private void TryJump()
     {
-        if (!isGrounded || !canJump) return;
+        if (coyoteTimeCounter > 0f && canJump)
+        {
+            canJump = false;
+            coyoteTimeCounter = 0f;
 
-        canJump = false;
-        rb.velocity = new Vector3(rb.velocity.x, 0, rb.velocity.z);
-        rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+            rb.velocity = new Vector3(rb.velocity.x, 0, rb.velocity.z);
+            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
 
-        animator.SetBool("IsJumping", true);
-        StopFootsteps();
+            animator.SetBool("IsJumping", true);
+            StopFootsteps();
 
-        if (jumpClip != null)
-            sfxAudioSource.PlayOneShot(jumpClip);
+            if (jumpClip != null)
+                sfxAudioSource.PlayOneShot(jumpClip);
 
-        Invoke(nameof(ResetJump), jumpCooldown);
+            Invoke(nameof(ResetJump), jumpCooldown);
+        }
     }
 
     void ResetJump() => canJump = true;
@@ -166,8 +173,15 @@ public class CharacterMovement : MonoBehaviour
         bool wasGrounded = isGrounded;
         isGrounded = Physics.Raycast(transform.position, Vector3.down, groundCheckDistance, groundLayer);
 
-        if (isGrounded && !wasGrounded)
+        if (isGrounded)
+        {
+            coyoteTimeCounter = coyoteTime;
             animator.SetBool("IsJumping", false);
+        }
+        else
+        {
+            coyoteTimeCounter -= Time.deltaTime;
+        }
 
         if (!isGrounded) StopFootsteps();
     }
